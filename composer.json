@@ -1,0 +1,13 @@
+{
+    "name": "david/wp-job-manager-jobadder",
+    "type": "wordpress-plugin",
+    "require": {
+        "monolog/monolog": "^1.24"
+    },
+    "authors": [
+        {
+            "name": "David Jensen",
+            "email": "david@dkjensen.com"
+        }
+    ]
+}
