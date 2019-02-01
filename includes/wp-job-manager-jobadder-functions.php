@@ -5,10 +5,6 @@
  * @package wp-job-manager-jobadder
  */
 
-function jobadder_get_jobs() {
-	return (array) get_option( '_jobadder_jobs' );
-}
-
 
 function jobadder_job_imported( $jid ) {
 	$jobadder_jobs = get_option( '_jobadder_jobs' );

@@ -11,8 +11,6 @@ use Monolog\Handler\StreamHandler;
 
 class WPJMJA_Feed {
 
-	private $params;
-
 	private $updated_jobs = array();
 
     private $removed_jobs = array();
@@ -23,16 +21,43 @@ class WPJMJA_Feed {
         $this->log = new Logger( 'wp-job-manager-jobadder' );
         $this->log->pushHandler( new StreamHandler( WP_JOB_MANAGER_JOBADDER_LOG, Logger::DEBUG ) );
 
-		$xml = file_get_contents( apply_filters( 'wpjmja_xml_feed', 'php://input' ) );
+        if( $_SERVER['REQUEST_METHOD'] !== 'POST' ) {
+            wp_die( __( '<p>Invalid requeset method.', 'wpjmja' ) );
+        }
 
-		if( empty( $xml ) ) {
-			wp_die( __( '<p>The XML supplied was empty or invalid.</p>', 'wpjmja' ) );
+		$xml = file_get_contents( apply_filters( 'wpjmja_xml_feed', 'php://input' ) );
+		$xml = simplexml_load_string( $xml );
+
+        if( empty( $xml ) ) {
+			wp_die( __( 'The XML supplied was empty or invalid.', 'wpjmja' ) );
 		}
 
-		$this->params = simplexml_load_string( $xml );
+        if( ! $this->is_authorized() ) {
+            $this->log->error( sprintf( __( 'Unauthorized attempt: %s', 'wpjmja' ), $_SERVER['REMOTE_ADDR'] ) );
 
-		$this->parse( $this->params );
-	}
+            wp_die( __( 'Invalid authorization.', 'wpjmja' ) );
+        }
+
+        $this->log->info( __( 'Starting XML parsing...' ) );
+		$this->parse( $xml );
+    }
+    
+
+    private function is_authorized() {
+        $authorized = false;
+
+        $authorized_ips = apply_filters( 'wpjmja_authorized_ips', array( 
+            '13.55.194.240',
+            '13.54.40.134',
+            '13.210.83.204'
+        ) );
+
+        if( in_array( $_SERVER['REMOTE_ADDR'], $authorized_ips ) ) {
+            $authorized = true;
+        }
+
+        return apply_filters( 'wpjmja_request_authorized', $authorized );
+    }
 
 
 	public function parse( $params ) {
@@ -45,9 +70,7 @@ class WPJMJA_Feed {
 
 				// Check if the job has already been imported, if so skip it
 				if( $this->job_exists( $jid ) ) {
-                    $this->log->info( sprintf( __( 'Job %d already exists, skipping...', 'wpjmja' ), (int) $job['jid'] ) );
-
-                    continue;
+                    $this->log->info( sprintf( __( 'Job %d already exists, updating...', 'wpjmja' ), (int) $job['jid'] ) );
                 }
 
 				// Since this job is not yet imported, lets add it
@@ -61,28 +84,64 @@ class WPJMJA_Feed {
             
             exit;
 		}else {
-			wp_die( __( '<p>Could not find any jobs in the provided XML.</p>', 'wpjmja' ) );
+            $this->log->info( __( 'No jobs present in given XML' ) );
+
+			wp_die( __( 'Could not find any jobs in the provided XML', 'wpjmja' ) );
 		}
 	}
 
 
 	public function job_exists( $jid ) {
-		$jobadder_jobs = get_option( '_jobadder_jobs' );
+        global $wpdb;
 
-		if( ! empty( $jobadder_jobs ) ) {
-			$jobs = array_map( 'intval', $jobadder_jobs );
+        $exists = $wpdb->get_var( $wpdb->prepare( "SELECT post_id FROM $wpdb->postmeta WHERE meta_key = '_jid' and meta_value = '%s' LIMIT 1", $jid ) );
 
-			if( in_array( $jid, $jobs ) ) {
-				return true;
-			}
-		}
+        if( null === $exists ) {
+            return false;
+        }
 
-		return false;
+        return $exists;
     }
 
 
 	public function add_job( $job ) {
-		$_post = wp_insert_post( apply_filters( 'wpjmja_insert_post', array(
+        global $wpdb;
+
+        $category =
+        $location =
+        $featured_image = 
+        $salary = 
+        $work_type = '';
+
+        foreach( $job->Classifications->children() as $classification ) {
+            switch( $classification['name'] ) {
+                case 'Category' :
+                    $category = (string) $classification;
+                    break;
+                case 'Featured Image' :
+                    $featured_image = (string) $classification;
+                    break;
+                case 'Work Type' :
+                    $work_type = (string) $classification;
+                    break;
+                case 'Location' :
+                    $location = (string) $classification;
+                    break;
+            }
+        }
+
+        foreach( $job->Fields->children() as $field ) {
+            if( (string) strtolower( $field['name'] ) == 'salary' ) {
+                $salary = (string) $field;
+                break;
+            }
+        }
+
+        $email_to = (string) $job->Apply->EmailTo;
+
+        $ejob = $this->job_exists( (int) $job['jid'] );
+
+        $job_post = apply_filters( 'wpjmja_insert_post', array(
 			'post_title' 		=> (string) $job->Title,
 			'post_excerpt' 		=> (string) $job->Summary,
 			'post_content'		=> (string) $job->Description,
@@ -90,52 +149,82 @@ class WPJMJA_Feed {
 			'post_type'			=> 'job_listing',
 			'meta_input'		=> array(
 				'_jid'			        => (int) $job['jid'],
-                '_job_salary'           => (string) $job->Salary->MinValue . '&mdash;' . (string) $job->Salary->MaxValue,
+                '_job_salary'           => ! empty( $salary ) ? $salary : (string) $job->Salary->MinValue . '&mdash;' . (string) $job->Salary->MaxValue,
                 '_job_salary_period'    => (string) $job->Salary['period'],
-				'_job_benefits'         => (string) $job->Salary->Text
-			)
-		) ) );
+                '_job_benefits'         => (string) $job->Salary->Text,
+                '_job_location'         => $location,
+                '_job_image'            => $featured_image,
+                '_application'          => is_email( $email_to ) ? $email_to : get_option( 'admin_email' )
+            ),
+        ) );
 
-		if( is_wp_error( $_post ) ) {
-            $this->log->error( $_post->get_error_message() );
-		}else {
-			$this->log->info( sprintf( __( 'Job %d added: Post ID #%d', 'wpjmja' ), (int) $job['jid'], intval( $_post ) ) );
-		}
-    }
-    
+        if( $ejob ) {
+            $job_post['ID'] = $ejob;
 
-    private function update_jobs( array $jobs ) {
-        $old_jobs       = get_option( '_jobadder_jobs' );
-        $removed_jobs   = array();
-
-		foreach( (array) $old_jobs as $job ) {
-			if( ! in_array( $job, $jobs ) ) {
-				$removed_jobs[] = $job;
-			}
+            $job_id = wp_update_post( $job_post );
+        }else {
+            $job_id = wp_insert_post( $job_post );
         }
 
-        // Remove jobs that no longer exist
-		$this->remove_jobs( $removed_jobs );
+        if( ! empty( $work_type ) ) {
+            switch( $work_type ) {
+                case 'Permanent / Full Time' :
+                    $work_type = 'Full Time';
+                    break;
+                case 'Contract or Temp' :
+                    $work_type = 'Temporary';
+                    break;
+            }
 
-        update_option( '_jobadder_jobs', $jobs );
+            $work_type_term = get_term_by( 'name', $work_type, 'job_listing_type' );
+
+            if( ! $work_type_term ) {
+                $work_type_term = wp_insert_term( $work_type, 'job_listing_type' );
+                $work_type_term = $work_type_term['term_id'];
+            }else {
+                $work_type_term = $work_type_term->term_id;
+            }
+
+            wp_set_post_terms( $job_id, (int) $work_type_term, 'job_listing_type' );
+        }
+
+        do_action( 'wpjmja_job_added', $job_id, $job );
+
+		if( is_wp_error( $job_id ) ) {
+            $this->log->error( $job_id->get_error_message() );
+		}else {
+			$this->log->info( sprintf( __( 'Job %d added: Post ID #%d', 'wpjmja' ), (int) $job['jid'], intval( $job_id ) ) );
+		}
     }
 
 
-	private function remove_jobs( array $removed_jobs ) {
+    private function update_jobs( array $jobs ) {
+        update_option( '_jobadder_jobs', $jobs );
+
+        // Remove jobs that no longer exist
+		$this->remove_jobs();
+    }
+
+
+	private function remove_jobs() {
         global $wpdb;
 
-        $removed = $wpdb->get_col( $wpdb->prepare( "
-            SELECT post_ID 
+        $current_jobs = get_option( '_jobadder_jobs' );
+
+        $jobs_list = implode( "','", $current_jobs );
+
+        $removed = $wpdb->get_col( "
+            SELECT post_id 
             FROM $wpdb->postmeta 
             WHERE meta_key = '_jid' 
-            AND meta_value IN (%s)
-        ", implode( ',', $removed_jobs ) ) );
+            AND meta_value NOT IN ('{$jobs_list}')
+        " );
 
 		if( ! empty( $removed ) ) {
 			foreach( $removed as $job ) {
 				wp_trash_post( $job );
 
-                $this->log->info( sprintf( __( 'Job deleted: Post ID #%s', 'wpjmja' ), $job ) );
+                $this->log->info( sprintf( __( 'Job trashed: Post ID #%s', 'wpjmja' ), $job ) );
 			}
 		}
 	}
