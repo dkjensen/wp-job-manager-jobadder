@@ -8,17 +8,17 @@ ehthumbs.db
 .DS_Store
 
 # Grunt
-node_modules
+node_modules/
 build/
 tmp/
 
 # Vendor
-vendor
+vendor/
 
 # Temporary files
 *~
 
 # WP Unit tests
-bin
-coverage
+bin/
+coverage/
 phpunit.xml
