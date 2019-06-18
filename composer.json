@@ -1,13 +1,37 @@
 {
-    "name": "david/wp-job-manager-jobadder",
+    "name": "dkjensen/wp-job-manager-jobadder",
     "type": "wordpress-plugin",
     "require": {
-        "monolog/monolog": "^1.24"
+        "composer/installers": "1.6.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "8.0.5"
     },
     "authors": [
         {
             "name": "David Jensen",
             "email": "david@dkjensen.com"
         }
-    ]
+    ],
+    "scripts": {
+        "test": [
+          "phpunit"
+        ],
+        "phpcs": [
+          "phpcs -s -p"
+        ],
+        "phpcs-pre-commit": [
+          "phpcs -s -p -n"
+        ],
+        "phpcbf": [
+          "phpcbf -p"
+        ]
+    },
+    "extra": {
+        "scripts-description": {
+          "test": "Run unit tests",
+          "phpcs": "Analyze code against the WordPress coding standards with PHP_CodeSniffer",
+          "phpcbf": "Fix coding standards warnings/errors automatically with PHP Code Beautifier"
+        }
+    }
 }
