@@ -22,3 +22,6 @@ vendor/
 bin/
 coverage/
 phpunit.xml
+
+# Logs
+logs/
