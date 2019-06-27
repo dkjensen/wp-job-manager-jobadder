@@ -35,10 +35,11 @@ class WP_Job_Manager_JobAdder_Log {
 	 * Logs an info message
 	 *
 	 * @param string $message
+	 * @param array  $details
 	 * @return void
 	 */
-	public function info( $message ) {
-		$this->log->info( esc_html__( $message, 'wp-job-manager-jobadder' ) );
+	public function info( $message, $details = array() ) {
+		$this->log->info( esc_html__( $message, 'wp-job-manager-jobadder' ), (array) $details );
 	}
 
 
@@ -46,10 +47,11 @@ class WP_Job_Manager_JobAdder_Log {
 	 * Logs an error message
 	 *
 	 * @param string $message
+	 * @param array  $details
 	 * @return void
 	 */
-	public function error( $message ) {
-		$this->log->error( esc_html__( $message, 'wp-job-manager-jobadder' ) );
+	public function error( $message, $details = array() ) {
+		$this->log->error( esc_html__( $message, 'wp-job-manager-jobadder' ), (array) $details );
 	}
 	
 }

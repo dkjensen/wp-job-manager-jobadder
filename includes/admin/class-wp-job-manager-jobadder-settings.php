@@ -253,7 +253,7 @@ class WP_Job_Manager_JobAdder_Settings {
                 'email'                 => __( 'Email', 'wp-job-manager-jobadder' ),
                 'phone'                 => __( 'Phone', 'wp-job-manager-jobadder' ),
                 'mobile'                => __( 'Mobile', 'wp-job-manager-jobadder' ),
-                'address:street'        => __( 'Street address', 'wp-job-manager-jobadder' ),
+                'address:street[]'      => __( 'Street address', 'wp-job-manager-jobadder' ),
                 'address:city'          => __( 'City', 'wp-job-manager-jobadder' ),
                 'address:state'         => __( 'State', 'wp-job-manager-jobadder' ),
                 'address:postalCode'    => __( 'Postal code', 'wp-job-manager-jobadder' ),

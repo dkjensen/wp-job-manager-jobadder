@@ -217,9 +217,10 @@ class WP_Job_Manager_JobAdder_Client {
             ) );
 
             $body = json_decode( (string) wp_remote_retrieve_body( $response ) );
+            $code = wp_remote_retrieve_response_code( $response );
 
-            if ( substr( wp_remote_retrieve_response_code( $response ), 0, 1 ) != 2 ) {
-                throw new WP_Job_Manager_JobAdder_Exception( $body->message, $body->errors );
+            if ( substr( $code, 0, 1 ) != 2 ) {
+                throw new WP_Job_Manager_JobAdder_Exception( $body->message, $code, $body->errors );
             }
 
             return $body;

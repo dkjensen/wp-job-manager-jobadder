@@ -17,6 +17,9 @@ class WP_Job_Manager_JobAdder_Applications {
 
         add_filter( 'pre_update_option', array( $this, 'save_application_form_fields' ), 10, 3 );
         add_action( 'delete_option_job_application_form_fields', array( $this, 'reload_application_form' ) );
+
+        add_filter( 'job_manager_application_field_value', array( $this, 'format_date' ), 10, 2 );
+        add_filter( 'job_manager_application_field_value', array( $this, 'format_url' ), 10, 2 );
     }
 
 
@@ -38,7 +41,7 @@ class WP_Job_Manager_JobAdder_Applications {
         }
 
         if ( $job_id ) {
-            foreach ( $apply->get_fields() as $key => $field ) {
+            foreach ( $apply->get_fields() as $field ) {
                 if ( empty( $field['jobadder'] ) ) {
                     continue;
                 }
@@ -46,11 +49,29 @@ class WP_Job_Manager_JobAdder_Applications {
                 $object = explode( ':', $field['jobadder'], 2 );
 
                 if ( sizeof( $object ) > 1 ) {
-                    $fields[ $object[0] ][ $object[1] ] = $field['value'];
+                    if ( substr( $field['jobadder'], -2, 2 ) == '[]' ) {
+                        $key = &$fields[ $object[0] ][ substr( $object[1], 0, -2 ) ];
+                    } else {
+                        $key = &$fields[ $object[0] ][ $object[1] ];
+                    }
                 } else {
-                    $fields[ $field['jobadder'] ] = $field['value']; 
+                    if ( substr( $field['jobadder'], -2, 2 ) == '[]' ) {
+                        $key = &$fields[ substr( $field['jobadder'], 0, -2 ) ];
+                    } else {
+                        $key = &$fields[ $field['jobadder'] ];
+                    }
+                }
+
+                $value = apply_filters( 'job_manager_application_field_value', $field['value'], $field );
+
+                if ( is_array( $key ) || substr( $field['jobadder'], -2, 2 ) == '[]' ) {
+                    $key[] = $value;
+                } else {
+                    $key = $value;
                 }
             }
+
+            var_dump( $fields );
 
             if ( ! empty( $fields ) ) {
                 /**
@@ -65,10 +86,44 @@ class WP_Job_Manager_JobAdder_Applications {
                 );
 
                 if ( is_wp_error( $posted ) ) {
-                    WP_Job_Manager_JobAdder()->log->error( $posted->get_error_message() );
+                    WP_Job_Manager_JobAdder()->log->error( $posted->get_error_message(), $posted->get_error_data() );
                 }
             }
         }
+    }
+
+
+    /**
+     * Format date into ISO 8601 format
+     *
+     * @param string $value
+     * @param array  $field
+     * @return string
+     */
+    public function format_date( $value, $field ) {
+        if ( $field['jobadder'] == 'availability:date' ) {
+            $value = date( 'c', strtotime( $value ) );
+        }
+
+        return $value;
+    }
+
+
+    /**
+     * Format fields into valid URLs
+     *
+     * @param string $value
+     * @param array  $field
+     * @return string
+     */
+    public function format_url( $value, $field ) {
+        $fields = array();
+
+        if ( in_array( $field['jobadder'], $fields ) ) {
+            $value = esc_url( $value );
+        }
+
+        return $value;
     }
 
 
