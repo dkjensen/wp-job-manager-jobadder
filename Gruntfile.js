@@ -112,7 +112,8 @@ module.exports = function(grunt) {
 				src: [
 					'**/*.php', // Include all files
 					'!node_modules/**', // Exclude node_modules/
-					'!build/**'// Exclude build/
+					'!build/**', // Exclude build/
+					'!logs/**'
 				],
 				expand: true
 			}
@@ -134,7 +135,8 @@ module.exports = function(grunt) {
                     'templates/**',
                     'vendor/**',
 					'*.php',
-                    '*.txt',
+					'*.txt',
+					'!logs/**'
 				],
 				dest: 'build/<%= pkg.name %>/'
 			}
