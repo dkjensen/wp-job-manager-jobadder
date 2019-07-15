@@ -203,6 +203,8 @@ class Settings {
             delete_option( 'job_manager_jobadder_token' );
             delete_option( 'jobadder_job_boards' );
 
+            wp_cache_flush();
+
             wp_redirect( admin_url( 'edit.php?post_type=job_listing&page=job-manager-settings' ) );
             exit;
         }

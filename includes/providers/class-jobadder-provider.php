@@ -38,7 +38,7 @@ class JobAdder_Provider extends AbstractProvider {
      * @param array $params
      * @return string
      */
-    public function getBaseAccessTokenUrl( $params ) {
+    public function getBaseAccessTokenUrl( array $params ) {
         return 'https://id.jobadder.com/connect/token';
     }
 
