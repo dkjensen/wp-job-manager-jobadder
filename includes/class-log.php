@@ -5,14 +5,18 @@
  * @package WP Job Manager - JobAdder Integration
  */
 
-if ( ! defined( 'ABSPATH' ) ) {
-	exit;
-}
+
+namespace SeattleWebCo\WPJobManager\Recruiter\JobAdder;
 
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
 
-class WP_Job_Manager_JobAdder_Log {
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+
+class Log {
 
 	/**
 	 * Instance of the logger class

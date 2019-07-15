@@ -5,26 +5,30 @@
  * @package WP Job Manager - JobAdder Integration
  */
 
+
+namespace SeattleWebCo\WPJobManager\Recruiter\JobAdder;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
 
-class WP_Job_Manager_JobAdder_Applications {
+class Applications {
 
     public function __construct() {
         add_action( 'new_job_application', array( $this, 'apply' ), 10, 2 );
 
         add_filter( 'pre_update_option', array( $this, 'save_application_form_fields' ), 10, 3 );
         add_action( 'delete_option_job_application_form_fields', array( $this, 'reload_application_form' ) );
-
-        add_filter( 'job_manager_application_field_value', array( $this, 'format_date' ), 10, 2 );
-        add_filter( 'job_manager_application_field_value', array( $this, 'format_url' ), 10, 2 );
     }
 
 
     public function apply( $application_id, $job_id ) {
-        $apply  = new WP_Job_Manager_Applications_Apply;
+        if ( ! get_option( 'jobadder_applications', 0 ) ) {
+            return;
+        }
+
+        $apply  = new \WP_Job_Manager_Applications_Apply;
         $fields = array();
 
         /**
@@ -42,88 +46,42 @@ class WP_Job_Manager_JobAdder_Applications {
 
         if ( $job_id ) {
             foreach ( $apply->get_fields() as $field ) {
-                if ( empty( $field['jobadder'] ) ) {
+                if ( empty( $field[ WP_JOB_MANAGER_RECRUITER_SLUG ] ) ) {
                     continue;
                 }
 
-                $object = explode( ':', $field['jobadder'], 2 );
+                $object = explode( ':', $field[ WP_JOB_MANAGER_RECRUITER_SLUG ], 2 );
 
                 if ( sizeof( $object ) > 1 ) {
-                    if ( substr( $field['jobadder'], -2, 2 ) == '[]' ) {
+                    if ( substr( $field[ WP_JOB_MANAGER_RECRUITER_SLUG ], -2, 2 ) == '[]' ) {
                         $key = &$fields[ $object[0] ][ substr( $object[1], 0, -2 ) ];
                     } else {
                         $key = &$fields[ $object[0] ][ $object[1] ];
                     }
                 } else {
-                    if ( substr( $field['jobadder'], -2, 2 ) == '[]' ) {
-                        $key = &$fields[ substr( $field['jobadder'], 0, -2 ) ];
+                    if ( substr( $field[ WP_JOB_MANAGER_RECRUITER_SLUG ], -2, 2 ) == '[]' ) {
+                        $key = &$fields[ substr( $field[ WP_JOB_MANAGER_RECRUITER_SLUG ], 0, -2 ) ];
                     } else {
-                        $key = &$fields[ $field['jobadder'] ];
+                        $key = &$fields[ $field[ WP_JOB_MANAGER_RECRUITER_SLUG ] ];
                     }
                 }
 
                 $value = apply_filters( 'job_manager_application_field_value', $field['value'], $field );
 
-                if ( is_array( $key ) || substr( $field['jobadder'], -2, 2 ) == '[]' ) {
+                if ( is_array( $key ) || substr( $field[ WP_JOB_MANAGER_RECRUITER_SLUG ], -2, 2 ) == '[]' ) {
                     $key[] = $value;
                 } else {
                     $key = $value;
                 }
             }
 
-            var_dump( $fields );
-
             if ( ! empty( $fields ) ) {
                 /**
-                 * @var integer $job_board
-                 * @var integer $job_ad
                  * @var array   $fields
                  */
-                $posted = WP_Job_Manager_JobAdder()->client->post_job_application( 
-                    absint( get_post_meta( $job_id, '_job_boardid', true ) ),
-                    absint( get_post_meta( $job_id, '_jobadid', true ) ),
-                    $fields
-                );
-
-                if ( is_wp_error( $posted ) ) {
-                    WP_Job_Manager_JobAdder()->log->error( $posted->get_error_message(), $posted->get_error_data() );
-                }
+                $posted = WP_Job_Manager_JobAdder()->client->post_job_application( $job_id, $fields );
             }
         }
-    }
-
-
-    /**
-     * Format date into ISO 8601 format
-     *
-     * @param string $value
-     * @param array  $field
-     * @return string
-     */
-    public function format_date( $value, $field ) {
-        if ( $field['jobadder'] == 'availability:date' ) {
-            $value = date( 'c', strtotime( $value ) );
-        }
-
-        return $value;
-    }
-
-
-    /**
-     * Format fields into valid URLs
-     *
-     * @param string $value
-     * @param array  $field
-     * @return string
-     */
-    public function format_url( $value, $field ) {
-        $fields = array();
-
-        if ( in_array( $field['jobadder'], $fields ) ) {
-            $value = esc_url( $value );
-        }
-
-        return $value;
     }
 
 
@@ -157,7 +115,7 @@ class WP_Job_Manager_JobAdder_Applications {
 
                 $new_value[ $field_name ] = $value[ $field_name ];
 
-                $new_value[ $field_name ]['jobadder'] = isset( $_POST['field_jobadder'] ) && isset( $_POST['field_jobadder'][ $i ] ) ? $_POST['field_jobadder'][ $i ] : '';
+                $new_value[ $field_name ][ WP_JOB_MANAGER_RECRUITER_SLUG ] = isset( $_POST['field_jobadder'] ) && isset( $_POST['field_jobadder'][ $key ] ) ? $_POST['field_jobadder'][ $key ] : '';
             
                 $i++;
             }

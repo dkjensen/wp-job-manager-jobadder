@@ -6,11 +6,11 @@
         application_fields.append( '<option value="' + i + '">' + n + '</option' );
     } );
 
-    jQuery( 'tbody#form-fields' ).siblings( 'thead' )
-                                 .find( 'th:nth-child(4)' )
-                                 .after( '<th>' + job_manager_jobadder.application_form_column_jobadder_label + '</th>' );
+    function new_field( i, n ) {
+        if( jQuery( this ).find( '[name^="field_jobadder"]' ).length ) {
+            return true;
+        }
 
-    jQuery( 'tbody#form-fields tr' ).each( function( i, n ) {
         var i = jQuery( this ).find( '[name^="field_label"]' ).attr( 'name' ).match( /\[(.*?)\]/ )[ 1 ];
 
         jobadder_field = application_fields.clone();
@@ -23,6 +23,14 @@
         } );
 
         jQuery( this ).find( 'td:nth-child(4)' ).after( '<td>' + jobadder_field.wrapAll( '<div/>' ).parent().html() + '</td>' );
+    }
+
+    jQuery( 'tbody#form-fields' ).siblings( 'thead' )
+                                 .find( 'th:nth-child(4)' )
+                                 .after( '<th>' + job_manager_jobadder.application_form_column_jobadder_label + '</th>' );
+
+    jQuery( '.wp-job-manager-applications-form-editor' ).on( 'init', function( e ) {
+        jQuery( this ).find( 'tbody tr' ).each( new_field );
     } );
 
 } )( jQuery );

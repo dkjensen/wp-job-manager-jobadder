@@ -10,29 +10,32 @@
  * @package WP Job Manager - JobAdder Integration
  */
 
+
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
-
-global $wp_version;
 
 define( 'WP_JOB_MANAGER_JOBADDER_VER', '1.0.0' );
 define( 'WP_JOB_MANAGER_JOBADDER_PLUGIN_NAME', 'WP Job Manager - JobAdder Integration' );
 define( 'WP_JOB_MANAGER_JOBADDER_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WP_JOB_MANAGER_JOBADDER_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
-
+define( 'WP_JOB_MANAGER_RECRUITER_SLUG', 'jobadder' );
 
 if ( ! defined( 'WP_JOB_MANAGER_JOBADDER_LOG' ) ) {
     define( 'WP_JOB_MANAGER_JOBADDER_LOG', WP_JOB_MANAGER_JOBADDER_PLUGIN_DIR . 'logs/log-debug.log' );
 }
 
 
-// Load Composer
 require WP_JOB_MANAGER_JOBADDER_PLUGIN_DIR . 'vendor/autoload.php';
-require WP_JOB_MANAGER_JOBADDER_PLUGIN_DIR . 'includes/class-wp-job-manager-jobadder.php';
+require WP_JOB_MANAGER_JOBADDER_PLUGIN_DIR . 'includes/class-recruiter.php';
 
 
 function WP_Job_Manager_JobAdder() {
-    return WP_Job_Manager_JobAdder::instance();
+    return \SeattleWebCo\WPJobManager\Recruiter\JobAdder\Recruiter::instance();
 }
 WP_Job_Manager_JobAdder();
+
+
+register_deactivation_hook( __FILE__, function() {
+    wp_clear_scheduled_hook( 'job_manager_' . WP_JOB_MANAGER_RECRUITER_SLUG . '_sync_jobs' );
+} );

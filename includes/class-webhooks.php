@@ -5,12 +5,15 @@
  * @package WP Job Manager - JobAdder Integration
  */
 
+ 
+namespace SeattleWebCo\WPJobManager\Recruiter\JobAdder;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
 
-class WP_Job_Manager_JobAdder_Webhooks {
+class Webhooks {
 
     /**
      * Enabled webhook events
@@ -43,7 +46,7 @@ class WP_Job_Manager_JobAdder_Webhooks {
      */
     public function webhooks_listener() {
         if ( $_SERVER['REQUEST_METHOD'] == 'POST' && isset( $_GET['job_manager_webhook'] ) && $_GET['job_manager_webhook'] == 'jobadder' ) {
-            wp_mail( 'david@dkjensen.com', 'test', file_get_contents( 'php://input' ) );
+            // 
             exit;
         }
     }
@@ -65,7 +68,7 @@ class WP_Job_Manager_JobAdder_Webhooks {
      * @return array
      */
     public function get_enabled_events() {
-        $webhooks = WP_Job_Manager_JobAdder()->client->get_webhooks( array(), 'Enabled' );
+        $webhooks = WP_Job_Manager_JobAdder()->client->adapter()->get_webhooks( array(), 'Enabled' );
 
         $events = array();
 
@@ -95,7 +98,7 @@ class WP_Job_Manager_JobAdder_Webhooks {
      * @return mixed
      */
     public function setup() {
-        return WP_Job_Manager_JobAdder()->client->post_webhook( 'wp_job_manager_jobadder', $this->get_events(), 'Enabled' );
+        return WP_Job_Manager_JobAdder()->client->adapter()->post_webhook( 'wp_job_manager_jobadder', $this->get_events(), 'Enabled' );
     }
 
 
@@ -107,7 +110,7 @@ class WP_Job_Manager_JobAdder_Webhooks {
     public function reset() {
         if ( sizeof( $this->webhook_ids ) > 1 ) {
             foreach ( $this->webhook_ids as $webhook_id ) {
-                WP_Job_Manager_JobAdder()->client->delete_webhook( $webhook_id );
+                WP_Job_Manager_JobAdder()->client->adapter()->delete_webhook( $webhook_id );
             }
 
             $this->setup();
