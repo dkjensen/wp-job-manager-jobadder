@@ -22,14 +22,6 @@ class Recruiter {
 
 
     /**
-     * Applications handling class
-     *
-     * @var Applications
-     */
-    public $applications;
-
-
-    /**
      * OAuth adapter
      *
      * @var mixed
@@ -54,19 +46,11 @@ class Recruiter {
 
 
     /**
-     * Cron jobs class
-     *
-     * @var Cron
-     */
-    public $cron;
-
-
-    /**
      * Provider client
      *
      * @var Client
      */
-    public $client;
+    public $clients;
 
     
     /**
@@ -79,17 +63,17 @@ class Recruiter {
             self::$instance = new Recruiter;
             self::$instance->includes();
 
-            self::$instance->oauth          = new JobAdder_Provider( array(
+            self::$instance->oauth          = new Provider\JobAdderProvider( array(
                 'clientId'       => get_option( 'jobadder_client_id' ),
                 'clientSecret'   => get_option( 'jobadder_client_secret' ),
                 'redirectUri'    => admin_url( 'edit.php?post_type=job_listing&page=job-manager-settings' )
             ) );
 
-            self::$instance->client         = new Client( new JobAdder_Adapter( self::$instance->oauth ) );
-            self::$instance->applications   = new Applications;
+            self::$instance->clients        = array(
+                'jobadder'  => new Client( new Adapter\JobAdderAdapter( self::$instance->oauth ) ),
+            );
             self::$instance->webhooks       = new Webhooks;
             self::$instance->log            = new Log;
-            self::$instance->cron           = new Cron;
 
             do_action_ref_array( 'wp_job_manager_jobadder_loaded', self::$instance ); 
         }
@@ -104,24 +88,10 @@ class Recruiter {
      * @return void
      */
     public function includes() {
-        require_once WP_JOB_MANAGER_JOBADDER_PLUGIN_DIR . 'includes/adapters/adapter-interface.php';
-
-        require_once WP_JOB_MANAGER_JOBADDER_PLUGIN_DIR . 'includes/class-client.php';
         require_once WP_JOB_MANAGER_JOBADDER_PLUGIN_DIR . 'includes/class-applications.php';
         require_once WP_JOB_MANAGER_JOBADDER_PLUGIN_DIR . 'includes/class-webhooks.php';
-        require_once WP_JOB_MANAGER_JOBADDER_PLUGIN_DIR . 'includes/class-log.php';
-        require_once WP_JOB_MANAGER_JOBADDER_PLUGIN_DIR . 'includes/class-exception.php';
-        require_once WP_JOB_MANAGER_JOBADDER_PLUGIN_DIR . 'includes/class-cron.php';
-
+        require_once WP_JOB_MANAGER_JOBADDER_PLUGIN_DIR . 'includes/cron-functions.php';
         require_once WP_JOB_MANAGER_JOBADDER_PLUGIN_DIR . 'includes/wp-job-manager-jobadder-functions.php';
-
-        /**
-         * Adapters
-         */
-
-        // JobAdder
-        require_once WP_JOB_MANAGER_JOBADDER_PLUGIN_DIR . 'includes/adapters/jobadder-adapter.php';
-        require_once WP_JOB_MANAGER_JOBADDER_PLUGIN_DIR . 'includes/providers/class-jobadder-provider.php';
 
         if ( is_admin() ) {
             require_once WP_JOB_MANAGER_JOBADDER_PLUGIN_DIR . 'includes/admin/class-settings.php';

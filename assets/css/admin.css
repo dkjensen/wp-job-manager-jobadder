@@ -1,9 +1,0 @@
-.wp-core-ui .button-error {
-  color: #fff;
-  background: #e83939;
-  border-color: #c71919 #bd2626 #c11a1a;
-  text-shadow: 0 -1px 1px #b71c1c, 1px 0 1px #bb1818, 0 1px 1px #c31515, -1px 0 1px #b91919; }
-  .wp-core-ui .button-error:hover, .wp-core-ui .button-error:focus {
-    color: #fff;
-    background: #ce3030;
-    border-color: #9c0808 #9a0f0f #a00808; }

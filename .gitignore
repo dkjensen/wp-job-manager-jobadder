@@ -1,27 +1,68 @@
-composer.lock
+# Packages #
+############
+*.7z
+*.dmg
+*.gz
+*.bz2
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+*.tgz
+*.map
 
-# Windows image file caches
-Thumbs.db
+# Logs and databases #
+######################
+*.log
+*.sql
+
+# OS generated files #
+######################
+**.DS_Store*
 ehthumbs.db
+Icon?
+Thumbs.db
+._*
 
-# Mac
-.DS_Store
+# Vim generated files #
+######################
+*.un~
 
-# Grunt
-node_modules/
-build/
-tmp/
+# SASS #
+##########
+**/.sass-cache
+**/.sass-cache/*
+**/.map
 
-# Vendor
+# Composer #
+##########
 vendor/
+vendors/composer/
+!assets/js/vendor/
+wpcs/
 
-# Temporary files
-*~
+# Bower #
+##########
+assets/bower_components/*
 
-# WP Unit tests
-bin/
-coverage/
-phpunit.xml
+# Codekit #
+##########
+/codekit-config.json
+*.codekit
+**.codekit-cache/*
 
-# Logs
-logs/
+# NPM #
+##########
+node_modules
+
+# Compiled Files and Build Dirs #
+##########
+/README.html
+/build/
+/coverage/
+/assets/
+mix-manifest.json
+
+# ENV #
+.env

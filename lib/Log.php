@@ -43,7 +43,7 @@ class Log {
 	 * @return void
 	 */
 	public function info( $message, $details = array() ) {
-		$this->log->info( esc_html__( $message, 'wp-job-manager-jobadder' ), (array) $details );
+		$this->log->info( esc_html( $message ), (array) $details );
 	}
 
 
@@ -55,7 +55,7 @@ class Log {
 	 * @return void
 	 */
 	public function error( $message, $details = array() ) {
-		$this->log->error( esc_html__( $message, 'wp-job-manager-jobadder' ), (array) $details );
+		$this->log->error( esc_html( $message ), (array) $details );
 	}
 	
 }

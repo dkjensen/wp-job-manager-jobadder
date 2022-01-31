@@ -6,14 +6,14 @@
  */
 
 
-namespace SeattleWebCo\WPJobManager\Recruiter\JobAdder;
+namespace SeattleWebCo\WPJobManager\Recruiter\JobAdder\Adapter;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
 
-interface Adapter_Interface {
+interface Adapter {
 
 
     public function connected();
@@ -25,7 +25,7 @@ interface Adapter_Interface {
     public function get_job( $job_id );
 
 
-    public function post_job_application( $job_id, $data );
+    public function post_job_application( $job_id, $data, $application_id );
 
 
     public function sync_jobs();

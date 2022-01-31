@@ -15,7 +15,7 @@ class AdapterTest extends \WP_UnitTestCase {
 
 
 	public function setUp() {
-		$this->provider = $this->getMockBuilder( '\SeattleWebCo\WPJobManager\Recruiter\JobAdder\JobAdder_Provider' )
+		$this->provider = $this->getMockBuilder( '\SeattleWebCo\WPJobManager\Recruiter\JobAdder\JobAdderProvider' )
 						 ->setConstructorArgs( array( array( 'test', 'test', admin_url( 'edit.php?post_type=job_listing&page=job-manager-settings' ) ) ) )
 						 ->getMock();
 	}

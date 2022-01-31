@@ -19,7 +19,7 @@ class Client {
     private $adapter;
 
 
-    public function __construct( Adapter_Interface $adapter ) {
+    public function __construct( Adapter\Adapter $adapter ) {
         $this->adapter = $adapter;
     }
 
@@ -44,8 +44,8 @@ class Client {
     }
 
     
-    public function post_job_application( $job_id, $data ) {
-        return $this->adapter->post_job_application( $job_id, $data );
+    public function post_job_application( $job_id, $data, $application_id ) {
+        return $this->adapter->post_job_application( $job_id, $data, $application_id );
     }
 
 

@@ -68,12 +68,11 @@ class Webhooks {
      * @return array
      */
     public function get_enabled_events() {
-        $webhooks = WP_Job_Manager_JobAdder()->client->adapter()->get_webhooks( array(), 'Enabled' );
+        $webhooks = WP_Job_Manager_JobAdder()->clients['jobadder']->adapter()->get_webhooks( array(), 'Enabled' );
 
         $events = array();
 
         if ( ! is_wp_error( $webhooks ) ) {
-
             foreach ( $webhooks->items as $webhook ) {
                 /**
                  * Validate the webhook is for this website and plugin
@@ -98,7 +97,7 @@ class Webhooks {
      * @return mixed
      */
     public function setup() {
-        return WP_Job_Manager_JobAdder()->client->adapter()->post_webhook( 'wp_job_manager_jobadder', $this->get_events(), 'Enabled' );
+        return WP_Job_Manager_JobAdder()->clients['jobadder']->adapter()->post_webhook( 'wp_job_manager_jobadder', $this->get_events(), 'Enabled' );
     }
 
 
@@ -110,7 +109,7 @@ class Webhooks {
     public function reset() {
         if ( sizeof( $this->webhook_ids ) > 1 ) {
             foreach ( $this->webhook_ids as $webhook_id ) {
-                WP_Job_Manager_JobAdder()->client->adapter()->delete_webhook( $webhook_id );
+                WP_Job_Manager_JobAdder()->clients['jobadder']->adapter()->delete_webhook( $webhook_id );
             }
 
             $this->setup();

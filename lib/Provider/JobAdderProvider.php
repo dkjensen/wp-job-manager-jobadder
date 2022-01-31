@@ -6,20 +6,13 @@
  */
 
 
-namespace SeattleWebCo\WPJobManager\Recruiter\JobAdder;
+namespace SeattleWebCo\WPJobManager\Recruiter\JobAdder\Provider;
 
 use League\OAuth2\Client\Provider\AbstractProvider;
 use Psr\Http\Message\ResponseInterface;
-use League\OAuth2\Client\Provider\Exception\IdentityProviderException;
 use League\OAuth2\Client\Token\AccessToken;
-use League\OAuth2\Client\Tool\BearerAuthorizationTrait;
 
-if ( ! defined( 'ABSPATH' ) ) {
-	exit;
-}
-
-
-class JobAdder_Provider extends AbstractProvider {
+class JobAdderProvider extends AbstractProvider {
 
     
     /**
@@ -69,7 +62,7 @@ class JobAdder_Provider extends AbstractProvider {
      * @return string
      */
     public function get_access_token( $code = false ) {
-        $tokens = get_option( 'job_manager_' . WP_JOB_MANAGER_RECRUITER_SLUG . '_token' );
+        $tokens = get_option( 'job_manager_jobadder_token' );
 
         if ( $code ) {
             $token = $this->getAccessToken( 'authorization_code', array( 'code' => $code ) );
@@ -92,7 +85,7 @@ class JobAdder_Provider extends AbstractProvider {
      * @return void
      */
     protected function set_access_tokens( AccessToken $token ) {
-        update_option( 'job_manager_' . WP_JOB_MANAGER_RECRUITER_SLUG . '_token', array( 
+        update_option( 'job_manager_jobadder_token', array( 
             'token'         => $token->getToken(),
             'expires'       => $token->getExpires(),
             'refresh_token' => $token->getRefreshToken()

@@ -6,24 +6,13 @@
  */
 
 
-namespace SeattleWebCo\WPJobManager\Recruiter\JobAdder;
+namespace SeattleWebCo\WPJobManager\Recruiter\JobAdder\Adapter;
 
+use SeattleWebCo\WPJobManager\Recruiter\JobAdder\Exception;
 use League\OAuth2\Client\Provider\AbstractProvider;
-use Psr\Http\Message\ResponseInterface;
-use League\OAuth2\Client\Provider\Exception\IdentityProviderException;
-use League\OAuth2\Client\Token\AccessToken;
-use League\OAuth2\Client\Tool\BearerAuthorizationTrait;
-
-if ( ! defined( 'ABSPATH' ) ) {
-	exit;
-}
 
 
-class JobAdder_Adapter implements Adapter_Interface {
-
-
-    private $oauth;
-
+class JobAdderAdapter implements Adapter {
 
     private $access_token;
 
@@ -51,7 +40,7 @@ class JobAdder_Adapter implements Adapter_Interface {
 
 
     public function get_job_ads( $job_board ) {
-        $job_ads = $this->request( 'GET', 'jobboards/' . $job_board . '/ads' );
+        $job_ads = $this->request( 'GET', 'jobboards/' . $job_board . '/ads?fields=description,portal.fields' );
 
         if ( ! is_wp_error( $job_ads ) ) {
             return $job_ads->items;
@@ -63,7 +52,7 @@ class JobAdder_Adapter implements Adapter_Interface {
 
     public function get_jobs() {
         $jobs = array();
-        
+
         foreach ( $this->get_synced_job_boards() as $job_board ) {
             $job_ads = $this->get_job_ads( $job_board );
 
@@ -112,21 +101,83 @@ class JobAdder_Adapter implements Adapter_Interface {
                 foreach ( $job_ads as $job_ad ) {
                     $job = $this->get_job( $job_ad->reference );
 
+                    if ( empty( $job->jobId ) ) {
+                        continue;
+                    }
+
+                    $category = $subcategory = $work_type = null;
+
+                    $classifications = $job_ad->portal->fields ?? [];
+
+                    if ( $classifications ) {
+                        foreach ( $classifications as $classification ) {
+                            if ( strpos( strtolower( $classification->fieldName ), 'type' ) !== false ) {
+                                $work_type = $classification->value;
+                            }
+
+                            if ( strpos( strtolower( $classification->fieldName ), 'category' ) !== false ) {
+                                $categories = $classification;
+                            }
+                        }
+
+                        if ( isset( $categories ) && isset( $categories->value ) ) {
+                            $category = get_term_by( 'name', $categories->value, 'job_listing_category', ARRAY_A );
+    
+                            if ( ! $category ) {
+                                $category = wp_insert_term( $categories->value, 'job_listing_category' );
+                            }
+
+                            if ( $category && ! is_wp_error( $category ) && isset( $categories->fields ) ) {
+                                foreach ( $categories->fields as $field ) {
+                                    if ( strpos( strtolower( $field->fieldName ), 'sub category' ) !== false ) {
+                                        $_subcategory = get_term_by( 'name', $field->value, 'job_listing_category', ARRAY_A );
+            
+                                        if ( ! $subcategory ) {
+                                            $_subcategory = wp_insert_term( $field->value, 'job_listing_category', array( 'parent' => $category['term_id'] ) );
+                                        }
+
+                                        if ( $_subcategory && ! is_wp_error( $_subcategory ) ) {
+                                            $subcategory = $_subcategory;
+                                        }
+
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if ( $work_type ) {
+                        switch ( $work_type ) {
+                            case 'Contract or Temp' :
+                                $work_type = 'Contract';
+                                break;
+                        }
+                
+                        $work_type = get_term_by( 'name', $work_type, 'job_listing_type', ARRAY_A );
+                    }
+
                     $jobs[] = array(
                         'post_title' 		=> isset( $job->jobTitle ) ? $job->jobTitle : __( 'Untitled job', 'wp-job-manager-jobadder' ),
                         'post_content' 		=> isset( $job->jobDescription ) ? $job->jobDescription : '',
                         'post_status'		=> 'publish',
                         'post_type'			=> 'job_listing',
+                        'tax_input'         => array(
+                            'job_listing_category' => array_filter( array( $category['term_id'], $subcategory['term_id'] ) ),
+                            'job_listing_type' => array_filter( array( $work_type['term_id'] ) ),
+                        ),
                         'meta_input'		=> array(
                             '_jid'			        => $job->jobId,
                             '_jobadid'              => $job_ad->adId,
                             '_job_boardid'          => $job_board,
-                            '_job_salary'           => isset( $job->salary ) ? job_manager_jobadder_format_salary( $job->salary ) : '',
+                            '_job_salary'           => isset( $job->salary ) ? trim( job_manager_jobadder_format_salary( $job->salary ), " \n\r\t\v\x00/" ) : '',
                             '_job_salary_period'    => isset( $job->salary ) && isset( $job->salary->ratePer ) ? $job->salary->ratePer : '',
                             '_job_location'         => isset( $job->location ) && isset( $job->location->name ) ? $job->location->name : '',
-                            '_application'          => get_option( 'admin_email' ),
-                            '_company_name'         => isset( $job->company ) && isset( $job->company->name ) ? $job->company->name : '',
-                            '_filled'               => isset( $job->status ) && isset( $job->status->active ) && $job->status->active ? 0 : 1
+                            '_job_expires'          => isset( $job_ad->expiresAt ) ? date( 'Y-m-d', strtotime( $job_ad->expiresAt ) ) : '',
+                            '_application'          => isset( $job->contact ) && isset( $job->contact->email ) ? $job->contact->email : get_option( 'admin_email' ),
+                            '_company_name'         => get_option( 'blogname' ),
+                            '_filled'               => isset( $job->status ) && isset( $job->status->active ) && $job->status->active ? 0 : 1,
+                            '_imported_from'        => 'jobadder',
                         ),
                     );
                 }
@@ -217,7 +268,7 @@ class JobAdder_Adapter implements Adapter_Interface {
     }
 
 
-    public function post_job_application( $job_id, $fields ) {
+    public function post_job_application( $job_id, $fields, $application_id ) {
         $job_board = absint( get_post_meta( $job_id, '_job_boardid', true ) );
         $job_ad = absint( get_post_meta( $job_id, '_jobadid', true ) );
 
@@ -232,35 +283,27 @@ class JobAdder_Adapter implements Adapter_Interface {
 
 
     public function request( $method, $endpoint, $json = array() ) {
-        $cache_key = md5( implode( '/', array( $method, $endpoint, json_encode( $json ) ) ) );
+        try {
+            $response = wp_remote_request( 'https://api.jobadder.com/v2/' . $endpoint, array(
+                'headers'       => array( 
+                    'Content-Type'      => 'application/json',
+                    'Authorization'     => 'Bearer ' . $this->access_token
+                ),
+                'method'        => $method,
+                'data_format'   => 'body',
+                'body'          => ! empty( $json ) ? json_encode( $json ) : null
+            ) );
 
-        if ( false === ( $cache = wp_cache_get( $cache_key ) ) ) {
-            try {
-                $response = wp_remote_request( 'https://api.jobadder.com/v2/' . $endpoint, array(
-                    'headers'       => array( 
-                        'Content-Type'      => 'application/json',
-                        'Authorization'     => 'Bearer ' . $this->access_token
-                    ),
-                    'method'        => $method,
-                    'data_format'   => 'body',
-                    'body'          => ! empty( $json ) ? json_encode( $json ) : null
-                ) );
+            $body = json_decode( (string) wp_remote_retrieve_body( $response ) );
+            $code = wp_remote_retrieve_response_code( $response );
 
-                $body = json_decode( (string) wp_remote_retrieve_body( $response ) );
-                $code = wp_remote_retrieve_response_code( $response );
-
-                if ( substr( $code, 0, 1 ) != 2 ) {
-                    throw new Exception( $body->message, $code, isset( $body->errors ) ? $body->errors : null );
-                }
-
-                wp_cache_set( $cache_key, $body );
-
-                return $body;
-            } catch( Exception $e ) {
-                return new \WP_Error( 'job_manager_jobadder_request', esc_html( $e->getMessage() ), $e->getDetails() );
+            if ( substr( $code, 0, 1 ) != 2 ) {
+                throw new Exception( $body->message, $code, isset( $body->errors ) ? $body->errors : null );
             }
-        } else {
-            return $cache;
+
+            return $body;
+        } catch ( Exception $e ) {
+            return new \WP_Error( 'job_manager_jobadder_request', esc_html( $e->getMessage() ), $e->getDetails() );
         }
     }
 }

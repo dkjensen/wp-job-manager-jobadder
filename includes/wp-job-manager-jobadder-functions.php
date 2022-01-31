@@ -61,7 +61,7 @@ add_filter( 'cron_schedules', 'job_manager_jobadder_sync_interval' );
  * @return string
  */
 function job_manager_jobadder_format_date( $value, $field ) {
-    if ( $field[ WP_JOB_MANAGER_RECRUITER_SLUG ] == 'availability:date' ) {
+    if ( $field['jobadder'] == 'availability:date' ) {
         $value = date( 'c', strtotime( $value ) );
     }
 
@@ -80,7 +80,7 @@ add_filter( 'job_manager_application_field_value', 'job_manager_jobadder_format_
 function job_manager_jobadder_format_url( $value, $field ) {
     $fields = array();
 
-    if ( in_array( $field[ WP_JOB_MANAGER_RECRUITER_SLUG ], $fields ) ) {
+    if ( in_array( $field['jobadder'], $fields ) ) {
         $value = esc_url( $value );
     }
 
