@@ -105,14 +105,14 @@ class JobAdderAdapter implements Adapter {
                         continue;
                     }
 
-                    $category = $subcategory = $work_type = null;
+                    $category = $subcategory = $job_type = null;
 
                     $classifications = $job_ad->portal->fields ?? [];
 
                     if ( $classifications ) {
                         foreach ( $classifications as $classification ) {
                             if ( strpos( strtolower( $classification->fieldName ), 'type' ) !== false ) {
-                                $work_type = $classification->value;
+                                $job_type = $classification->value;
                             }
 
                             if ( strpos( strtolower( $classification->fieldName ), 'category' ) !== false ) {
@@ -147,15 +147,19 @@ class JobAdderAdapter implements Adapter {
                         }
                     }
 
-                    if ( $work_type ) {
-                        switch ( $work_type ) {
+                    if ( $job_type ) {
+                        switch ( $job_type ) {
                             case 'Contract or Temp' :
-                                $work_type = 'Contract';
+                                $job_type = 'Contract';
                                 break;
                         }
                 
-                        $work_type = get_term_by( 'name', $work_type, 'job_listing_type', ARRAY_A );
+                        $job_type = get_term_by( 'name', $job_type, 'job_listing_type', ARRAY_A );
                     }
+
+                    $category    = apply_filters( 'wp_job_manager_jobadder_category', $category, $job );
+                    $subcategory = apply_filters( 'wp_job_manager_jobadder_subcategory', $subcategory, $job );
+                    $job_type    = apply_filters( 'wp_job_manager_jobadder_job_type', $job_type, $job );
 
                     $jobs[] = array(
                         'post_title' 		=> isset( $job->jobTitle ) ? $job->jobTitle : __( 'Untitled job', 'wp-job-manager-jobadder' ),
@@ -164,7 +168,7 @@ class JobAdderAdapter implements Adapter {
                         'post_type'			=> 'job_listing',
                         'tax_input'         => array(
                             'job_listing_category' => array_filter( array( $category['term_id'], $subcategory['term_id'] ) ),
-                            'job_listing_type' => array_filter( array( $work_type['term_id'] ) ),
+                            'job_listing_type' => array_filter( array( $job_type['term_id'] ) ),
                         ),
                         'meta_input'		=> array(
                             '_jid'			        => $job->jobId,
