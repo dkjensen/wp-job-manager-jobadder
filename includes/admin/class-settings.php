@@ -35,7 +35,7 @@ class Settings {
 
         add_action( 'job_manager_jobadder_settings', array( $this, 'jobadder_authorization' ) );
         add_action( 'job_manager_jobadder_settings', array( $this, 'jobadder_deauthorization' ) );
-        add_action( 'job_manager_jobadder_settings', array( $this, 'jobadder_sync_jobs' ) );
+        add_action( 'admin_init', array( $this, 'jobadder_sync_jobs' ) );
         add_action( 'admin_enqueue_scripts', array( $this, 'scripts' ) );
     }
 
@@ -80,7 +80,7 @@ class Settings {
             ),
             array(
                 'before' => sprintf( __( '<a href="%1$s" target="_blank">Register your JobAdder Developers application</a> using the following value as an authorized redirect URI: <code>%2$s</code>', 'wp-job-manager-jobadder' ), 'https://developers.jobadder.com/partners/clients/add', admin_url( 'edit.php?post_type=job_listing&page=job-manager-settings' ) ),
-                'after' => sprintf( '<a href="%s">%s</a>', wp_nonce_url( admin_url( 'edit.php?post_type=job_listing&page=job-manager-settings&sync=true' ) ), __( 'Sync now', 'wp-job-manager-jobadder' ) )
+                'after' => sprintf( '<a href="%s">%s</a>', wp_nonce_url( admin_url( 'edit.php?post_type=job_listing&page=job-manager-settings&sync=jobadder' ) ), __( 'Sync now', 'wp-job-manager-jobadder' ) )
             ),
         );
 
@@ -158,7 +158,7 @@ class Settings {
             $authorization = WP_Job_Manager_JobAdder()->oauth->get_access_token( $_GET['code'] );
 
             if ( ! is_wp_error( $authorization ) ) {
-                WP_Job_Manager_JobAdder()->cron->schedule_sync();
+                schedule_sync();
 
                 wp_redirect( admin_url( 'edit.php?post_type=job_listing&page=job-manager-settings&connected=true#settings-jobadder' ) );
                 exit;
@@ -178,7 +178,7 @@ class Settings {
 
 
     public function jobadder_sync_jobs() {
-        if ( isset( $_GET['sync'] ) && $_GET['sync'] == 'true' && wp_verify_nonce( $_GET['_wpnonce'] ) && current_user_can( 'manage_options' ) ) {
+        if ( isset( $_GET['sync'] ) && $_GET['sync'] == 'jobadder' && wp_verify_nonce( $_GET['_wpnonce'] ) && current_user_can( 'manage_options' ) ) {
             do_action( 'job_manager_jobadder_sync_jobs' );
         }
     }

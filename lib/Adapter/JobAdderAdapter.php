@@ -10,6 +10,7 @@ namespace SeattleWebCo\WPJobManager\Recruiter\JobAdder\Adapter;
 
 use SeattleWebCo\WPJobManager\Recruiter\JobAdder\Exception;
 use League\OAuth2\Client\Provider\AbstractProvider;
+use SeattleWebCo\WPJobManager\Recruiter\JobAdder\Log;
 
 
 class JobAdderAdapter implements Adapter {
@@ -162,8 +163,8 @@ class JobAdderAdapter implements Adapter {
                     $job_type    = apply_filters( 'wp_job_manager_jobadder_job_type', $job_type, $job );
 
                     $jobs[] = array(
-                        'post_title' 		=> isset( $job->jobTitle ) ? $job->jobTitle : __( 'Untitled job', 'wp-job-manager-jobadder' ),
-                        'post_content' 		=> isset( $job->jobDescription ) ? $job->jobDescription : '',
+                        'post_title' 		=> isset( $job_ad->title ) ? $job_ad->title : __( 'Untitled job', 'wp-job-manager-jobadder' ),
+                        'post_content' 		=> isset( $job_ad->description ) ? $job_ad->description : '',
                         'post_status'		=> 'publish',
                         'post_type'			=> 'job_listing',
                         'tax_input'         => array(
@@ -178,7 +179,7 @@ class JobAdderAdapter implements Adapter {
                             '_job_salary_period'    => isset( $job->salary ) && isset( $job->salary->ratePer ) ? $job->salary->ratePer : '',
                             '_job_location'         => isset( $job->location ) && isset( $job->location->name ) ? $job->location->name : '',
                             '_job_expires'          => isset( $job_ad->expiresAt ) ? date( 'Y-m-d', strtotime( $job_ad->expiresAt ) ) : '',
-                            '_application'          => isset( $job->contact ) && isset( $job->contact->email ) ? $job->contact->email : get_option( 'admin_email' ),
+                            '_application'          => $job->owner->email ?? get_option( 'admin_email' ),
                             '_company_name'         => get_option( 'blogname' ),
                             '_filled'               => isset( $job->status ) && isset( $job->status->active ) && $job->status->active ? 0 : 1,
                             '_imported_from'        => 'jobadder',
@@ -278,11 +279,38 @@ class JobAdderAdapter implements Adapter {
 
         $application = $this->request( 'POST', 'jobboards/' . $job_board . '/ads/' . $job_ad . '/applications', (array) $fields );
 
-        if ( ! is_wp_error( $application ) ) {
-            return $application;
+        if ( is_wp_error( $application ) ) {
+            return false;
         }
 
-        return false;
+        $this->post_job_application_documents( $job_ad, $job_board, $application, $application_id );
+
+        return $application;
+    }
+
+
+    public function post_job_application_documents( $job_ad, $job_board, $application, $application_post_id ) {
+        $documents = get_post_meta( $application_post_id, '_attachment_file', true );
+
+        if ( ! empty( $documents ) && is_array( $documents ) ) {
+            foreach ( $documents as $document ) {
+                $file = new \CURLFile( $document );
+                $file->setPostFilename( basename( $document ) );
+
+                $ch = curl_init();
+                curl_setopt( $ch, CURLOPT_RETURNTRANSFER, 1 );
+                curl_setopt( $ch, CURLOPT_URL, 'https://api.jobadder.com/v2/jobboards/' . $job_board . '/ads/' . $job_ad . '/applications/' . $application->applicationId . '/Resume' );
+                curl_setopt( $ch, CURLOPT_HTTPHEADER, [
+                    "Authorization: Bearer " . $this->access_token,
+                    "Content-Type: multipart/form-data",
+                ] );
+                curl_setopt( $ch, CURLOPT_POSTFIELDS, [ 'fileData' => $file ] );
+
+                $response = curl_exec( $ch );
+
+                WP_Job_Manager_JobAdder()->log->info( __( 'Uploading application documents...', 'wp-job-manager-jobadder' ), $response );
+            }
+        }
     }
 
 
