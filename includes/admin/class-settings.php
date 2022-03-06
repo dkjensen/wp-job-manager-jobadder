@@ -126,7 +126,7 @@ class Settings {
             
             <label>
                 <input name="jobadder_job_boards[]"  type="checkbox" value="<?php print esc_attr( $job_board->boardId ); ?>" <?php checked( true, in_array( $job_board->boardId, WP_Job_Manager_JobAdder()->clients['jobadder']->adapter()->get_synced_job_boards() ) ); ?>>
-                <?php print esc_html_e( $job_board->name, 'wp-job-manager-jobadder' ); ?>
+                <?php esc_html_e( $job_board->name, 'wp-job-manager-jobadder' ); ?>
             </label><br>
 
         <?php endforeach; ?>
@@ -141,6 +141,8 @@ class Settings {
         if ( current_user_can( 'manage_options' ) && is_admin() && ( ! defined( 'DOING_AJAX' ) || ! DOING_AJAX ) ) {
             if ( isset( $_GET['page'] ) && $_GET['page'] == 'job-manager-settings' ) {
                 $this->connected = WP_Job_Manager_JobAdder()->clients['jobadder']->connected();
+
+                var_dump( $this->connected );
 
                 if ( ! $this->connected ) {
                 }

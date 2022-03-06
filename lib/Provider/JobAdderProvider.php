@@ -8,6 +8,7 @@
 
 namespace SeattleWebCo\WPJobManager\Recruiter\JobAdder\Provider;
 
+use SeattleWebCo\WPJobManager\Recruiter\JobAdder\Log;
 use League\OAuth2\Client\Provider\AbstractProvider;
 use Psr\Http\Message\ResponseInterface;
 use League\OAuth2\Client\Token\AccessToken;
@@ -64,14 +65,18 @@ class JobAdderProvider extends AbstractProvider {
     public function get_access_token( $code = false ) {
         $tokens = get_option( 'job_manager_jobadder_token' );
 
-        if ( $code ) {
-            $token = $this->getAccessToken( 'authorization_code', array( 'code' => $code ) );
-        } elseif ( isset( $tokens['expires'] ) && time() > $tokens['expires'] ) {
-            $token = $this->getAccessToken( 'refresh_token', array( 'refresh_token' => $tokens['refresh_token'] ) );
-        }
+        try {
+            if ( $code ) {
+                $token = $this->getAccessToken( 'authorization_code', array( 'code' => $code ) );
+            } elseif ( isset( $tokens['expires'] ) && time() > $tokens['expires'] ) {
+                $token = $this->getAccessToken( 'refresh_token', array( 'refresh_token' => $tokens['refresh_token'] ) );
+            }
 
-        if ( isset( $token ) ) {
-            $this->set_access_tokens( $token );
+            if ( isset( $token ) ) {
+                $this->set_access_tokens( $token );
+            }
+        } catch ( \Exception $e ) {
+            Log::error( $e->getMessage(), debug_backtrace() );
         }
 
         return isset( $tokens['token'] ) ? $tokens['token'] : '';

@@ -8,6 +8,8 @@
  
 namespace SeattleWebCo\WPJobManager\Recruiter\JobAdder;
 
+use SeattleWebCo\WPJobManager\Recruiter\JobAdder\Log;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -34,7 +36,7 @@ class Exception extends \Exception {
             $this->details = json_encode( (array) $details );
         }
 
-        WP_Job_Manager_JobAdder()->log->error( $message, $this->getDetails() );
+        Log::error( $message, $this->getDetails() );
 
         parent::__construct( __( 'JobAdder Message: ', 'wp-job-manager-jobadder' ) . $message, intval( $code ), null );
     }

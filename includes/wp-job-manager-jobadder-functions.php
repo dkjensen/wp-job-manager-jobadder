@@ -28,7 +28,7 @@ function job_manager_jobadder_format_salary( stdClass $salary ) {
     }
 
     if ( $per ) {
-        $salary .= '/' . esc_html_e( $per, 'wp-job-manager-jobadder' ); 
+        $salary .= '/' . esc_html( $per ); 
     }
 
     return $salary;

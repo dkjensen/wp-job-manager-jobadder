@@ -53,12 +53,19 @@ class Client {
         $jobs = $this->adapter->sync_jobs();
 
         foreach ( $jobs as $job_postdata ) {
-            if ( false !== ( $existing = $this->adapter->job_exists( $job_postdata['meta_input']['_jid'] ) ) ) {
-                $job_postdata['ID'] = $existing;
+            $existing = $this->adapter->job_exists( $job_postdata['meta_input']['_jid'] );
+            $filled   = $job_postdata['meta_input']['_filled'];
 
-                wp_update_post( $job_postdata );
-            } else {
-                wp_insert_post( $job_postdata );
+            if ( ! $filled ) {
+                if ( false !== $existing ) {
+                    $job_postdata['ID'] = $existing;
+
+                    wp_update_post( $job_postdata );
+                } else {
+                    wp_insert_post( $job_postdata );
+                }
+            } elseif ( ! $filled && $existing ) {
+                update_post_meta( $existing, '_filled', 1 );
             }
         }
     }

@@ -25,7 +25,7 @@ class JobAdderAdapter implements Adapter {
 
 
     public function connected() {
-        return $this->get_job_boards();
+        return false === $this->get_job_boards() ? false : true;
     }
 
 
@@ -50,6 +50,15 @@ class JobAdderAdapter implements Adapter {
         return false;
     }
 
+    public function get_job_ad( $job_ad_id ) {
+        $job_ad = $this->request( 'GET', 'jobads/' . $job_ad_id );
+
+        if ( ! is_wp_error( $job_ad ) ) {
+            return $job_ad;
+        }
+
+        return false;
+    }
 
     public function get_jobs() {
         $jobs = array();
@@ -100,7 +109,9 @@ class JobAdderAdapter implements Adapter {
 
             if ( $job_ads ) {
                 foreach ( $job_ads as $job_ad ) {
-                    $job = $this->get_job( $job_ad->reference );
+                    $job_ad = $this->get_job_ad( $job_ad->adId );
+
+                    $job = $this->get_job( $job_ad->job->jobId );
 
                     if ( empty( $job->jobId ) ) {
                         continue;
@@ -168,8 +179,8 @@ class JobAdderAdapter implements Adapter {
                         'post_status'		=> 'publish',
                         'post_type'			=> 'job_listing',
                         'tax_input'         => array(
-                            'job_listing_category' => array_filter( array( $category['term_id'], $subcategory['term_id'] ) ),
-                            'job_listing_type' => array_filter( array( $job_type['term_id'] ) ),
+                            'job_listing_category' => array_filter( array( $category['term_id'] ?? null, $subcategory['term_id'] ?? null ) ),
+                            'job_listing_type' => array_filter( array( $job_type['term_id'] ?? null ) ),
                         ),
                         'meta_input'		=> array(
                             '_jid'			        => $job->jobId,
@@ -197,10 +208,16 @@ class JobAdderAdapter implements Adapter {
         global $wpdb;
 
         $exists = $wpdb->get_var( $wpdb->prepare( "
-            SELECT post_id 
-            FROM   $wpdb->postmeta 
-            WHERE  meta_key = '_jid'
-            AND    meta_value = '%s' 
+            SELECT pm1.post_id 
+            FROM   $wpdb->postmeta pm1
+            JOIN   $wpdb->postmeta pm2
+                ON pm1.post_id = pm2.post_id
+                AND pm2.meta_key = '_imported_from'
+                AND pm2.meta_value = 'jobadder'
+            JOIN   $wpdb->posts p1
+                ON p1.ID = pm1.post_id
+            WHERE  pm1.meta_key = '_jid'
+            AND    pm1.meta_value = '%s' 
             LIMIT  1", $id 
         ) );
 
@@ -308,7 +325,7 @@ class JobAdderAdapter implements Adapter {
 
                 $response = curl_exec( $ch );
 
-                WP_Job_Manager_JobAdder()->log->info( __( 'Uploading application documents...', 'wp-job-manager-jobadder' ), $response );
+                Log::info( __( 'Uploading application documents...', 'wp-job-manager-jobadder' ), $response );
             }
         }
     }
