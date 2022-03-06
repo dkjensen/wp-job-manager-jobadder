@@ -142,8 +142,6 @@ class Settings {
             if ( isset( $_GET['page'] ) && $_GET['page'] == 'job-manager-settings' ) {
                 $this->connected = WP_Job_Manager_JobAdder()->clients['jobadder']->connected();
 
-                var_dump( $this->connected );
-
                 if ( ! $this->connected ) {
                 }
 
