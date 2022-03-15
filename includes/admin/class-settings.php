@@ -186,8 +186,6 @@ class Settings {
 
     public function jobadder_deauthorization() {
         if ( isset( $_GET['state'] ) && $_GET['state'] == 'jobadder-deauthorization' && wp_verify_nonce( $_GET['_wpnonce'] ) && current_user_can( 'manage_options' ) ) {
-            delete_option( 'jobadder_client_id' );
-            delete_option( 'jobadder_client_secret' );
             delete_option( 'job_manager_jobadder_token' );
             delete_option( 'jobadder_job_boards' );
 

@@ -29,7 +29,7 @@ function apply( $application_id, $job_id ) {
     if ( $job_id ) {
         $client = get_post_meta( $job_id, '_imported_from', true );
 
-        if ( empty( $client ) ) {
+        if ( empty( $client ) || empty( WP_Job_Manager_JobAdder()->clients[ $client ] ) ) {
             return;
         }
 

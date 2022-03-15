@@ -119,45 +119,27 @@ class JobAdderAdapter implements Adapter {
 
                     $category = $subcategory = $job_type = null;
 
-                    $classifications = $job_ad->portal->fields ?? [];
+                    if ( isset( $job->category ) && isset( $job->category->name ) ) {
+                        $category = get_term_by( 'name', $job->category->name, 'job_listing_category', ARRAY_A );
 
-                    if ( $classifications ) {
-                        foreach ( $classifications as $classification ) {
-                            if ( strpos( strtolower( $classification->fieldName ), 'type' ) !== false ) {
-                                $job_type = $classification->value;
-                            }
-
-                            if ( strpos( strtolower( $classification->fieldName ), 'category' ) !== false ) {
-                                $categories = $classification;
-                            }
+                        if ( ! $category ) {
+                            $category = wp_insert_term( $job->category->name, 'job_listing_category' );
                         }
 
-                        if ( isset( $categories ) && isset( $categories->value ) ) {
-                            $category = get_term_by( 'name', $categories->value, 'job_listing_category', ARRAY_A );
-    
-                            if ( ! $category ) {
-                                $category = wp_insert_term( $categories->value, 'job_listing_category' );
+                        if ( $category && ! is_wp_error( $category ) && isset( $job->category->subCategory ) ) {
+                            $_subcategory = get_term_by( 'name', $job->category->subCategory->name, 'job_listing_category', ARRAY_A );
+
+                            if ( ! $subcategory ) {
+                                $_subcategory = wp_insert_term( $job->category->subCategory->name, 'job_listing_category', array( 'parent' => $category['term_id'] ) );
                             }
 
-                            if ( $category && ! is_wp_error( $category ) && isset( $categories->fields ) ) {
-                                foreach ( $categories->fields as $field ) {
-                                    if ( strpos( strtolower( $field->fieldName ), 'sub category' ) !== false ) {
-                                        $_subcategory = get_term_by( 'name', $field->value, 'job_listing_category', ARRAY_A );
-            
-                                        if ( ! $subcategory ) {
-                                            $_subcategory = wp_insert_term( $field->value, 'job_listing_category', array( 'parent' => $category['term_id'] ) );
-                                        }
-
-                                        if ( $_subcategory && ! is_wp_error( $_subcategory ) ) {
-                                            $subcategory = $_subcategory;
-                                        }
-
-                                        break;
-                                    }
-                                }
+                            if ( $_subcategory && ! is_wp_error( $_subcategory ) ) {
+                                $subcategory = $_subcategory;
                             }
                         }
                     }
+
+                    $job_type = $job->workType->name ?? null;
 
                     if ( $job_type ) {
                         switch ( $job_type ) {
@@ -168,6 +150,8 @@ class JobAdderAdapter implements Adapter {
                 
                         $job_type = get_term_by( 'name', $job_type, 'job_listing_type', ARRAY_A );
                     }
+
+                    Log::info( 'job ad', $job_ad );
 
                     $category    = apply_filters( 'wp_job_manager_jobadder_category', $category, $job );
                     $subcategory = apply_filters( 'wp_job_manager_jobadder_subcategory', $subcategory, $job );
@@ -189,7 +173,7 @@ class JobAdderAdapter implements Adapter {
                             '_job_salary'           => isset( $job->salary ) ? trim( job_manager_jobadder_format_salary( $job->salary ), " \n\r\t\v\x00/" ) : '',
                             '_job_salary_period'    => isset( $job->salary ) && isset( $job->salary->ratePer ) ? $job->salary->ratePer : '',
                             '_job_location'         => isset( $job->location ) && isset( $job->location->name ) ? $job->location->name : '',
-                            '_job_expires'          => isset( $job_ad->expiresAt ) ? date( 'Y-m-d', strtotime( $job_ad->expiresAt ) ) : '',
+                            '_job_expires'          => isset( $job_ad->expireAt ) ? date( 'Y-m-d', strtotime( $job_ad->expireAt ) ) : '',
                             '_application'          => $job->owner->email ?? get_option( 'admin_email' ),
                             '_company_name'         => get_option( 'blogname' ),
                             '_filled'               => isset( $job->status ) && isset( $job->status->active ) && $job->status->active ? 0 : 1,

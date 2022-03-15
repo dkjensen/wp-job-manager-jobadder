@@ -62,9 +62,13 @@ class Client {
 
                     wp_update_post( $job_postdata );
                 } else {
-                    wp_insert_post( $job_postdata );
+                    $inserted = wp_insert_post( $job_postdata );
+
+                    if ( ! $inserted ) {
+                        Log::error( 'Error creating job listing from JobAdder', $job_postdata );
+                    }
                 }
-            } elseif ( ! $filled && $existing ) {
+            } elseif ( $filled && $existing ) {
                 update_post_meta( $existing, '_filled', 1 );
             }
         }
